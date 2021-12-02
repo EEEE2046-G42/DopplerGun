@@ -108,8 +108,17 @@ int main(void)
   LCD_Set_Cursor(0, 0);
   //LCD_Write_Char('a');
   LCD_Write_String("hello");
-  LCD_Set_Cursor(1, 0);
+  LCD_Set_Cursor(0, 1);
   LCD_Write_String("world");
+
+  HAL_Delay(1000);
+
+  // Set LCD display state
+  LCD_displayState = MetresPerSecond;
+
+  // Display menu
+  LCD_DisplayMenu();
+
   /* USER CODE END 2 */
 
   /* Infinite loop */

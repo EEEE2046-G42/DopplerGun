@@ -12,6 +12,14 @@
 
 #define LCD_EN_Delay 50
 
+// Rows and column of the LCD
+#define LCD_ROWS 2
+#define LCD_COLUMNS 16
+
+// Indicator character
+#define LCD_INDICATOR 0x7E
+
+//
 typedef struct
 {
 	GPIO_TypeDef * LCD_GPIO;
@@ -23,6 +31,17 @@ typedef struct
 	uint16_t RS_PIN;
 } DisplayPinConfig;
 
+// Lists display states (speed units etc)
+typedef enum
+{
+	Misc,
+	MilesPerHour,
+	KilometresPerHour,
+	MetresPerSecond,
+} EDisplayState;
+
+// Global variables
+EDisplayState LCD_displayState;
 
 //-----[ Prototypes For All Functions ]-----
 
@@ -37,5 +56,7 @@ void LCD_Home();
 
 void LCD_PULSE_EN();
 void LCD_usDelay(uint16_t);
+
+void LCD_DisplayMenu();
 
 #endif /* DISPLAY_H_ */

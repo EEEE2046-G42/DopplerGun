@@ -82,7 +82,7 @@ void LCD_Clear()
     LCD_usDelay(50);
 }
 
-void LCD_Set_Cursor(unsigned char r, unsigned char c)
+void LCD_Set_Cursor(unsigned char c, unsigned char r)
 {
     unsigned char temp, lowerNib, upperNib;
     if(r == 0)
@@ -225,4 +225,34 @@ void LCD_Write_String(char *str)
 void LCD_Home()
 {
 	LCD_CMD(0x02);
+}
+
+void LCD_DisplayMenu()
+{
+	// Label locations
+	const unsigned char mphx = 0;
+	const unsigned char kmhx = 6;
+	const unsigned char msx = 12;
+
+	// Clear row
+	LCD_Set_Cursor(0, 1);
+	for (int i = 0; i < LCD_COLUMNS; i++)
+		LCD_Write_Char(' ');
+
+	// Print speed labels
+
+	// mph
+	LCD_Set_Cursor(mphx, 1);
+	LCD_Write_Char(LCD_displayState == MilesPerHour ? LCD_INDICATOR : ' ');
+	LCD_Write_String("mph");
+
+	// kmh
+	LCD_Set_Cursor(kmhx, 1);
+	LCD_Write_Char(LCD_displayState == KilometresPerHour ? LCD_INDICATOR : ' ');
+	LCD_Write_String("kmh");
+
+	// m/s
+	LCD_Set_Cursor(msx, 1);
+	LCD_Write_Char(LCD_displayState == MetresPerSecond ? LCD_INDICATOR : ' ');
+	LCD_Write_String("m/s");
 }
