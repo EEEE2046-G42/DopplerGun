@@ -18,7 +18,6 @@
   */
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
-#include <display.h>
 #include "main.h"
 
 /* Private includes ----------------------------------------------------------*/
@@ -96,28 +95,31 @@ int main(void)
   /* USER CODE BEGIN 2 */
   HAL_Delay(100);
 
-//  Lcd_PortType ports[] = {GPIOB, GPIOB, GPIOB, GPIOB};
-//  Lcd_PinType pins[] = {9, 10, 11, 12};
-//
-//  Lcd_HandleTypeDef lcd = Lcd_create(ports, pins, GPIOB, 3, GPIOB, 4, LCD_4_BIT_MODE);
-
-//  Lcd_string(&lcd,  "beans");
-
   LCD_Init();
 
   LCD_Set_Cursor(0, 0);
-  //LCD_Write_Char('a');
   LCD_Write_String("hello");
   LCD_Set_Cursor(0, 1);
   LCD_Write_String("world");
 
   HAL_Delay(1000);
 
+  //LCD_Clear();
+
   // Set LCD display state
   LCD_displayState = MetresPerSecond;
 
   // Display menu
   LCD_DisplayMenu();
+
+  // Display speed
+  LCD_DisplaySpeed(3.14);
+
+  HAL_Delay(1000);
+
+  LCD_displayState = MilesPerHour;
+  LCD_DisplayMenu();
+  LCD_DisplaySpeed(2.718);
 
   /* USER CODE END 2 */
 
@@ -128,8 +130,6 @@ int main(void)
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
-	HAL_GPIO_TogglePin(RED_LED_GPIO_Port, RED_LED_Pin);
-	HAL_Delay(500);
   }
   /* USER CODE END 3 */
 }
@@ -338,7 +338,13 @@ static void MX_GPIO_Init(void)
 }
 
 /* USER CODE BEGIN 4 */
-
+void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
+{
+//    if(GPIO_Pin == LCD_BTN_Pin) // If the INT source is the LCD button pin
+//    {
+//    	LCD_ButtonHandler();
+//    }
+}
 /* USER CODE END 4 */
 
 /**

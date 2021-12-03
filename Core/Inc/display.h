@@ -9,6 +9,7 @@
 #define DISPLAY_H_
 
 #include "stm32l4xx_hal.h"
+#include "stdbool.h"
 
 #define LCD_EN_Delay 50
 
@@ -18,6 +19,9 @@
 
 // Indicator character
 #define LCD_INDICATOR 0x7E
+
+// Speed character length
+#define LCD_SPEED_LENGTH 6
 
 //
 typedef struct
@@ -34,7 +38,6 @@ typedef struct
 // Lists display states (speed units etc)
 typedef enum
 {
-	Misc,
 	MilesPerHour,
 	KilometresPerHour,
 	MetresPerSecond,
@@ -43,7 +46,10 @@ typedef enum
 // Global variables
 EDisplayState LCD_displayState;
 
-//-----[ Prototypes For All Functions ]-----
+char LCD_prevSpeedStr[LCD_SPEED_LENGTH];
+EDisplayState LCD_prevDisplayState;
+
+void LCD_ButtonHandler();
 
 void LCD_Init();                  // Initialize The LCD For 4-Bit Interface
 void LCD_Clear();                 // Clear The LCD Display
@@ -58,5 +64,10 @@ void LCD_PULSE_EN();
 void LCD_usDelay(uint16_t);
 
 void LCD_DisplayMenu();
+void LCD_DisplaySpeed(const float metresPerSecond);
+
+void LCD_FormatSpeed(const float, char[]);	// Display speed, given in metres per second
+
+void LCD_Update();	// Update LCD selectively if needed
 
 #endif /* DISPLAY_H_ */

@@ -107,6 +107,13 @@ void LCD_Set_Cursor(unsigned char c, unsigned char r)
     HAL_Delay(1);
 }
 
+void LCD_ButtonHandler()
+{
+	LCD_displayState = LCD_displayState == 2 ? 0 : LCD_displayState + 1;
+	HAL_GPIO_TogglePin(GPIOA, 6);
+	LCD_DisplayMenu();
+}
+
 void LCD_Init()
 {
 	GPIO_InitTypeDef GPIO_InitStruct = {0};
@@ -229,6 +236,10 @@ void LCD_Home()
 
 void LCD_DisplayMenu()
 {
+	// Don't do anything if state is the same
+	if (LCD_displayState == LCD_prevDisplayState)
+		return;
+
 	// Label locations
 	const unsigned char mphx = 0;
 	const unsigned char kmhx = 6;
@@ -255,4 +266,56 @@ void LCD_DisplayMenu()
 	LCD_Set_Cursor(msx, 1);
 	LCD_Write_Char(LCD_displayState == MetresPerSecond ? LCD_INDICATOR : ' ');
 	LCD_Write_String("m/s");
+
+	// Set prev value
+	LCD_prevDisplayState = LCD_displayState;
+}
+
+void LCD_DisplaySpeed(const float metresPerSecond)
+{
+	// Format speed as string
+	char strSpeed[LCD_SPEED_LENGTH];
+	LCD_FormatSpeed(metresPerSecond, strSpeed);
+
+	// Only update speed on display if text has changed!
+	bool hasChanged = false;
+	for (int i = 0; i < LCD_SPEED_LENGTH; i++)
+		if (strSpeed[i] != LCD_prevSpeedStr[i]) hasChanged = true;
+
+	if (hasChanged)
+	{
+		// Set cursor position and clear row
+		LCD_Set_Cursor(0, 0);
+		for (int i = 0; i < LCD_COLUMNS; i++)
+				LCD_Write_Char(' ');
+		LCD_Set_Cursor(6, 0);
+
+		// Print string
+		LCD_Write_String(strSpeed);
+
+		// Copy to prev value
+		for (int i = 0; i < LCD_SPEED_LENGTH; i++)
+			LCD_prevSpeedStr[i] = strSpeed[i];
+	}
+}
+
+void LCD_FormatSpeed(const float metresPerSecond, char output[])
+{
+	float convertedSpeed;
+
+	// Convert speed to output format
+	switch (LCD_displayState)
+	{
+	case MilesPerHour:
+		convertedSpeed = metresPerSecond * 2.23694;
+		break;
+	case KilometresPerHour:
+		convertedSpeed = metresPerSecond * 3.6;
+		break;
+	case MetresPerSecond:
+		convertedSpeed = metresPerSecond;
+	}
+
+	// Convert float to formatted string
+	sprintf(output, "%.2f", convertedSpeed);
 }
