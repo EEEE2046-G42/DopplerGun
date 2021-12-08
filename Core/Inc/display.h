@@ -48,6 +48,7 @@ EDisplayState LCD_displayState;
 
 char LCD_prevSpeedStr[LCD_SPEED_LENGTH];
 EDisplayState LCD_prevDisplayState;
+float LCD_currentSpeed;
 
 void LCD_ButtonHandler();
 

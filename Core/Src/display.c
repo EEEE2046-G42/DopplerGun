@@ -110,8 +110,9 @@ void LCD_Set_Cursor(unsigned char c, unsigned char r)
 void LCD_ButtonHandler()
 {
 	LCD_displayState = LCD_displayState == 2 ? 0 : LCD_displayState + 1;
-	HAL_GPIO_TogglePin(GPIOA, 6);
+	//HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_6);
 	LCD_DisplayMenu();
+	LCD_DisplaySpeed(LCD_currentSpeed);
 }
 
 void LCD_Init()
@@ -273,6 +274,8 @@ void LCD_DisplayMenu()
 
 void LCD_DisplaySpeed(const float metresPerSecond)
 {
+	LCD_currentSpeed = metresPerSecond;
+
 	// Format speed as string
 	char strSpeed[LCD_SPEED_LENGTH];
 	LCD_FormatSpeed(metresPerSecond, strSpeed);

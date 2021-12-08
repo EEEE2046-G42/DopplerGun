@@ -70,6 +70,8 @@ void Error_Handler(void);
 #define RED_LED_GPIO_Port GPIOA
 #define COMP_Pin GPIO_PIN_0
 #define COMP_GPIO_Port GPIOB
+#define LCD_BTN_Pin GPIO_PIN_6
+#define LCD_BTN_GPIO_Port GPIOC
 #define TMS_Pin GPIO_PIN_13
 #define TMS_GPIO_Port GPIOA
 #define TCK_Pin GPIO_PIN_14

@@ -32,6 +32,7 @@
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
+#define BTN_DEBOUNCE_TIME 100
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -45,6 +46,9 @@ ADC_HandleTypeDef hadc1;
 UART_HandleTypeDef huart2;
 
 /* USER CODE BEGIN PV */
+
+bool prevLCDBtnState = false;
+uint32_t prevLCDBtnTimestamp = 0;
 
 /* USER CODE END PV */
 
@@ -127,6 +131,19 @@ int main(void)
   /* USER CODE BEGIN WHILE */
   while (1)
   {
+	  // Poll LCD button pin, inverted because it is active LOW
+	  bool LCDBtnState = !HAL_GPIO_ReadPin(LCD_BTN_GPIO_Port, LCD_BTN_Pin);
+
+	  // Only respond when newly depressed and debounce
+	  if (LCDBtnState && !prevLCDBtnState && (HAL_GetTick() > prevLCDBtnTimestamp + BTN_DEBOUNCE_TIME))
+	  {
+		  LCD_ButtonHandler();
+		  prevLCDBtnTimestamp = HAL_GetTick();
+	  }
+
+	  prevLCDBtnState = LCDBtnState;
+
+
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
@@ -335,15 +352,21 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   HAL_GPIO_Init(COMP_GPIO_Port, &GPIO_InitStruct);
 
+  /*Configure GPIO pin : LCD_BTN_Pin */
+  GPIO_InitStruct.Pin = LCD_BTN_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
+  GPIO_InitStruct.Pull = GPIO_PULLUP;
+  HAL_GPIO_Init(LCD_BTN_GPIO_Port, &GPIO_InitStruct);
+
 }
 
 /* USER CODE BEGIN 4 */
 void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
 {
-//    if(GPIO_Pin == LCD_BTN_Pin) // If the INT source is the LCD button pin
-//    {
-//    	LCD_ButtonHandler();
-//    }
+    if(GPIO_Pin == LCD_BTN_Pin) // If the INT source is the LCD button pin
+    {
+    	//LCD_ButtonHandler();
+	}
 }
 /* USER CODE END 4 */
 
