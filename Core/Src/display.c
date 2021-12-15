@@ -6,6 +6,7 @@
  */
 #include "display.h"
 
+// Set display port and pins
 const DisplayPinConfig DisplayPins =
 {
 	GPIOB,
@@ -17,104 +18,7 @@ const DisplayPinConfig DisplayPins =
 	GPIO_PIN_3
 };
 
-// Macros to shorthand set high and low
-#define SETHIGH(x) HAL_GPIO_WritePin(DisplayPins.LCD_GPIO, DisplayPins.x, 1)
-#define SETLOW(x) HAL_GPIO_WritePin(DisplayPins.LCD_GPIO, DisplayPins.x, 0)
-
-
-//-----[ Alphanumeric LCD 16x2 Routines ]-----
-
-void LCD_usDelay(uint16_t t)
-{
-	// Do nothing loop
-	for (uint16_t i = 0; i < t * 40; i++);
-}
-
-void LCD_PULSE_EN()
-{
-	// Send The EN Clock Signal
-    SETHIGH(EN_PIN);
-    LCD_usDelay(LCD_EN_Delay);
-    SETLOW(EN_PIN);
-    LCD_usDelay(LCD_EN_Delay);
-}
-
-// Set parallel bits
-void LCD_DATA(unsigned char data)
-{
-    if(data & 0b0001)
-    	SETHIGH(D4_PIN);
-    else
-    	SETLOW(D4_PIN);
-
-    if(data & 0b0010)
-    	SETHIGH(D5_PIN);
-    else
-    	SETLOW(D5_PIN);
-
-    if(data & 0b0100)
-    	SETHIGH(D6_PIN);
-    else
-    	SETLOW(D6_PIN);
-
-    if(data & 0b1000)
-    	SETHIGH(D7_PIN);
-    else
-    	SETLOW(D7_PIN);
-}
-
-void LCD_CMD(unsigned char a_CMD)
-{
-    // Select Command Register
-	SETLOW(RS_PIN);
-
-    // Move The Command Data To LCD
-    LCD_DATA(a_CMD);
-
-    // Pulse enable pin
-    LCD_PULSE_EN();
-}
-
-void LCD_Clear()
-{
-	LCD_CMD(0x00);
-    LCD_CMD(0x01);
-    LCD_usDelay(50);
-}
-
-void LCD_Set_Cursor(unsigned char c, unsigned char r)
-{
-    unsigned char temp, lowerNib, upperNib;
-    if(r == 0)
-    {
-      //temp  = 0b1000 + c; //0x80 is used to move the cursor
-      temp  = 0x80 + c;
-      upperNib = temp >> 4;
-      lowerNib  = temp & 0x0F;
-      LCD_CMD(upperNib);
-      LCD_CMD(lowerNib);
-    }
-    else if(r == 1)
-    {
-      //temp  = 0b1000 + 0x40 + c;
-      temp  = 0xC0 + c;
-      upperNib = temp >> 4;
-      lowerNib  = temp & 0x0F;
-      LCD_CMD(upperNib);
-      LCD_CMD(lowerNib);
-    }
-
-    HAL_Delay(1);
-}
-
-void LCD_ButtonHandler()
-{
-	LCD_displayState = LCD_displayState == 2 ? 0 : LCD_displayState + 1;
-	//HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_6);
-	LCD_DisplayMenu();
-	LCD_DisplaySpeed(LCD_currentSpeed);
-}
-
+// Initialize LCD (4-bit)
 void LCD_Init()
 {
 	GPIO_InitTypeDef GPIO_InitStruct = {0};
@@ -147,68 +51,92 @@ void LCD_Init()
 	HAL_GPIO_Init(DisplayPins.LCD_GPIO, &GPIO_InitStruct);
 
 	// 4-bit initialisation procedure
-
-	/*// Set E and RS LOW
 	SETLOW(RS_PIN);
 	SETLOW(EN_PIN);
 
-    LCD_DATA(0x00);		// Set data pins low
-    HAL_Delay(150);		// Wait 150 ms
-
-    LCD_CMD(0b0011);	// Send 0b0011
-    HAL_Delay(2);		// Wait 2 ms
-
-    LCD_CMD(0b0010);
-    LCD_CMD(0b1000);	// Set number of lines and data length
-
-    HAL_Delay(1);
-
-    LCD_CMD(0b0010);
-	LCD_CMD(0b1000);	// Set number of lines and data length
-
-	HAL_Delay(1);
-
-	LCD_CMD(0b0000);
-	LCD_CMD(0b1110);	// Enable display, cursor, and blinking
-
-	HAL_Delay(1);
-
-	LCD_Clear();
-
-	HAL_Delay(10);
-
-	LCD_CMD(0b0000);
-	LCD_CMD(0b0100);	// Set entry mode*/
-
-	SETLOW(RS_PIN);
-	SETLOW(EN_PIN);
-
-	LCD_DATA(0x00);
+	LCD_SetData(0x00);
 	HAL_Delay(150);
 
-	LCD_CMD(0x03);
+	LCD_Command(0x03);
 	HAL_Delay(5);
 
-	LCD_CMD(0x03);
+	LCD_Command(0x03);
 	LCD_usDelay(150);
 
-	LCD_CMD(0x03);
-	LCD_CMD(0x02);
+	LCD_Command(0x03);
+	LCD_Command(0x02);
 
-	LCD_CMD(0x02);
-	LCD_CMD(0x08);
+	LCD_Command(0x02);
+	LCD_Command(0x08);
 
-	LCD_CMD(0x00);
-	LCD_CMD(0x0C);
+	LCD_Command(0x00);
+	LCD_Command(0x0C);
 
-	LCD_CMD(0x00);
-	LCD_CMD(0x06);
+	LCD_Command(0x00);
+	LCD_Command(0x06);
 
-	LCD_CMD(0x00);
-	LCD_CMD(0x01);
+	LCD_Command(0x00);
+	LCD_Command(0x01);
 }
 
-void LCD_Write_Char(char data)
+// Clear display
+void LCD_Clear()
+{
+	LCD_Command(0x00);
+    LCD_Command(0x01);
+    LCD_usDelay(50);
+}
+
+// Send command to LCD
+void LCD_Command(unsigned char a_CMD)
+{
+    // Select Command Register
+	SETLOW(RS_PIN);
+
+    // Move The Command Data To LCD
+    LCD_SetData(a_CMD);
+
+    // Pulse enable pin
+    LCD_PulseEN();
+}
+
+// Set data bits
+void LCD_SetData(unsigned char data)
+{
+	SET(D4_PIN, data & 0b0001);
+	SET(D5_PIN, data & 0b0010);
+	SET(D6_PIN, data & 0b0100);
+	SET(D7_PIN, data & 0b1000);
+}
+
+// Set cursor pos
+void LCD_SetCursor(unsigned char c, unsigned char r)
+{
+    unsigned char temp, lowerNib, upperNib;
+    if(r == 0)
+    {
+      //temp  = 0b1000 + c; //0x80 is used to move the cursor
+      temp  = 0x80 + c;
+      upperNib = temp >> 4;
+      lowerNib  = temp & 0x0F;
+      LCD_Command(upperNib);
+      LCD_Command(lowerNib);
+    }
+    else if(r == 1)
+    {
+      //temp  = 0b1000 + 0x40 + c;
+      temp  = 0xC0 + c;
+      upperNib = temp >> 4;
+      lowerNib  = temp & 0x0F;
+      LCD_Command(upperNib);
+      LCD_Command(lowerNib);
+    }
+
+    HAL_Delay(1);
+}
+
+// Write character to LCD at cursor pos
+void LCD_WriteChar(char data)
 {
    char lowerNib,upperNib;
    lowerNib  = data & 0x0F;
@@ -216,25 +144,44 @@ void LCD_Write_Char(char data)
 
    SETHIGH(RS_PIN);
 
-   LCD_DATA(upperNib);
-   LCD_PULSE_EN();
+   LCD_SetData(upperNib);
+   LCD_PulseEN();
 
-   LCD_DATA(lowerNib);
-   LCD_PULSE_EN();
+   LCD_SetData(lowerNib);
+   LCD_PulseEN();
 }
 
-void LCD_Write_String(char *str)
+// Write a string to LCD
+void LCD_WriteString(char *str)
 {
     int i;
     for(i=0;str[i]!='\0';i++)
-       LCD_Write_Char(str[i]);
+       LCD_WriteChar(str[i]);
 }
 
+// Sets cursor to (0,0)
 void LCD_Home()
 {
-	LCD_CMD(0x02);
+	LCD_Command(0x02);
 }
 
+// Pulses enable pin
+void LCD_PulseEN()
+{
+    SETHIGH(EN_PIN);
+    LCD_usDelay(LCD_EN_Delay);
+    SETLOW(EN_PIN);
+    LCD_usDelay(LCD_EN_Delay);
+}
+
+// Short delay
+void LCD_usDelay(uint16_t t)
+{
+	// Do nothing loop
+	for (uint16_t i = 0; i < t * 40; i++);
+}
+
+// Update and display menu (unit selection and indicator)
 void LCD_DisplayMenu()
 {
 	// Don't do anything if state is the same
@@ -247,31 +194,32 @@ void LCD_DisplayMenu()
 	const unsigned char msx = 12;
 
 	// Clear row
-	LCD_Set_Cursor(0, 1);
+	LCD_SetCursor(0, 1);
 	for (int i = 0; i < LCD_COLUMNS; i++)
-		LCD_Write_Char(' ');
+		LCD_WriteChar(' ');
 
 	// Print speed labels
 
 	// mph
-	LCD_Set_Cursor(mphx, 1);
-	LCD_Write_Char(LCD_displayState == MilesPerHour ? LCD_INDICATOR : ' ');
-	LCD_Write_String("mph");
+	LCD_SetCursor(mphx, 1);
+	LCD_WriteChar(LCD_displayState == MilesPerHour ? LCD_INDICATOR : ' ');
+	LCD_WriteString("mph");
 
 	// kmh
-	LCD_Set_Cursor(kmhx, 1);
-	LCD_Write_Char(LCD_displayState == KilometresPerHour ? LCD_INDICATOR : ' ');
-	LCD_Write_String("kmh");
+	LCD_SetCursor(kmhx, 1);
+	LCD_WriteChar(LCD_displayState == KilometresPerHour ? LCD_INDICATOR : ' ');
+	LCD_WriteString("kmh");
 
 	// m/s
-	LCD_Set_Cursor(msx, 1);
-	LCD_Write_Char(LCD_displayState == MetresPerSecond ? LCD_INDICATOR : ' ');
-	LCD_Write_String("m/s");
+	LCD_SetCursor(msx, 1);
+	LCD_WriteChar(LCD_displayState == MetresPerSecond ? LCD_INDICATOR : ' ');
+	LCD_WriteString("m/s");
 
 	// Set prev value
 	LCD_prevDisplayState = LCD_displayState;
 }
 
+// Update and display speed
 void LCD_DisplaySpeed(const float metresPerSecond)
 {
 	LCD_currentSpeed = metresPerSecond;
@@ -288,13 +236,13 @@ void LCD_DisplaySpeed(const float metresPerSecond)
 	if (hasChanged)
 	{
 		// Set cursor position and clear row
-		LCD_Set_Cursor(0, 0);
+		LCD_SetCursor(0, 0);
 		for (int i = 0; i < LCD_COLUMNS; i++)
-				LCD_Write_Char(' ');
-		LCD_Set_Cursor(6, 0);
+				LCD_WriteChar(' ');
+		LCD_SetCursor(6, 0);
 
 		// Print string
-		LCD_Write_String(strSpeed);
+		LCD_WriteString(strSpeed);
 
 		// Copy to prev value
 		for (int i = 0; i < LCD_SPEED_LENGTH; i++)
@@ -302,6 +250,7 @@ void LCD_DisplaySpeed(const float metresPerSecond)
 	}
 }
 
+// Format speed given in m/s as string, output depending on selected unit
 void LCD_FormatSpeed(const float metresPerSecond, char output[])
 {
 	float convertedSpeed;
@@ -322,3 +271,13 @@ void LCD_FormatSpeed(const float metresPerSecond, char output[])
 	// Convert float to formatted string
 	sprintf(output, "%.2f", convertedSpeed);
 }
+
+// Handles button presses
+void LCD_ButtonHandler()
+{
+	LCD_displayState = LCD_displayState == 2 ? 0 : LCD_displayState + 1;
+	//HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_6);
+	LCD_DisplayMenu();
+	LCD_DisplaySpeed(LCD_currentSpeed);
+}
+

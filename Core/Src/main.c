@@ -108,10 +108,10 @@ int main(void)
 
   LCD_Init();
 
-  LCD_Set_Cursor(0, 0);
-  LCD_Write_String("hello");
-  LCD_Set_Cursor(0, 1);
-  LCD_Write_String("world");
+  LCD_SetCursor(0, 0);
+  LCD_WriteString("hello");
+  LCD_SetCursor(0, 1);
+  LCD_WriteString("world");
 
   HAL_Delay(1000);
 
@@ -140,7 +140,7 @@ int main(void)
   {
 	  // Start ADC Conversion
 	  // Pass (The ADC Instance, Result Buffer Address, Buffer Length)
-	  HAL_ADC_Start_DMA(&hadc1, ADC_BUFFER, ADC_BUFFER_LENGTH);
+	  //HAL_ADC_Start_DMA(&hadc1, ADC_BUFFER, ADC_BUFFER_LENGTH);
 
 	  // Poll LCD button pin, inverted because it is active LOW
 	  bool LCDBtnState = !HAL_GPIO_ReadPin(LCD_BTN_GPIO_Port, LCD_BTN_Pin);
