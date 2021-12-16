@@ -11,11 +11,15 @@
 #define ADC_BUFFER_LENGTH 1024
 
 #include "stdint.h"
+#include "stdbool.h"
+#include "stm32l4xx_hal.h"
+#include "stm32l4xx_hal_dma.h"
 
 // Define array in which to store ADC readings
 uint16_t ADC_BUFFER[ADC_BUFFER_LENGTH];
 
-// Handles a full DMA buffer
-double ADC_HandleBufferFull();
+void ADC_Calibrate(ADC_HandleTypeDef *adc);										// Calibrates ADC
+void ADC_Measure(ADC_HandleTypeDef *adc);										// Starts a measurement
+double ADC_HandleBufferFull(ADC_HandleTypeDef *adc, DMA_HandleTypeDef *dma);	// Handles a full DMA buffer
 
 #endif /* INC_ADC_H_ */

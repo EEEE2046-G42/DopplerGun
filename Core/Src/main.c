@@ -45,6 +45,8 @@
 ADC_HandleTypeDef hadc1;
 DMA_HandleTypeDef hdma_adc1;
 
+TIM_HandleTypeDef htim1;
+
 UART_HandleTypeDef huart2;
 
 /* USER CODE BEGIN PV */
@@ -60,6 +62,7 @@ static void MX_GPIO_Init(void);
 static void MX_DMA_Init(void);
 static void MX_USART2_UART_Init(void);
 static void MX_ADC1_Init(void);
+static void MX_TIM1_Init(void);
 /* USER CODE BEGIN PFP */
 
 /* USER CODE END PFP */
@@ -100,8 +103,9 @@ int main(void)
   MX_DMA_Init();
   MX_USART2_UART_Init();
   MX_ADC1_Init();
+  MX_TIM1_Init();
   /* USER CODE BEGIN 2 */
-  HAL_ADCEx_Calibration_Start(&hadc1, ADC_SINGLE_ENDED);
+  //ADC_Calibrate(&hadc1);
 
   HAL_Delay(100);
 
@@ -118,19 +122,18 @@ int main(void)
   //LCD_Clear();
 
   // Set LCD display state
-  LCD_displayState = MetresPerSecond;
-
-  // Display menu
-  LCD_DisplayMenu();
+  LCD_SetSpeedUnit(MetresPerSecond);
 
   // Display speed
   LCD_DisplaySpeed(3.14);
 
   HAL_Delay(1000);
 
-  LCD_displayState = MilesPerHour;
-  LCD_DisplayMenu();
+  LCD_SetSpeedUnit(MilesPerHour);
   LCD_DisplaySpeed(2.718);
+
+  // Take ADC measurement
+  ADC_Measure(&hadc1);
 
   /* USER CODE END 2 */
 
@@ -140,7 +143,6 @@ int main(void)
   {
 	  // Start ADC Conversion
 	  // Pass (The ADC Instance, Result Buffer Address, Buffer Length)
-	  //HAL_ADC_Start_DMA(&hadc1, ADC_BUFFER, ADC_BUFFER_LENGTH);
 
 	  // Poll LCD button pin, inverted because it is active LOW
 	  bool LCDBtnState = !HAL_GPIO_ReadPin(LCD_BTN_GPIO_Port, LCD_BTN_Pin);
@@ -154,6 +156,10 @@ int main(void)
 
 	  prevLCDBtnState = LCDBtnState;
 
+	  // Take measurement
+	  HAL_DMA_StateTypeDef dmaState = HAL_DMA_GetState(&hdma_adc1);
+	  if (dmaState == HAL_DMA_STATE_READY /*&& HAL_ADC_GetState(&hadc1) & (HAL_ADC_STATE_READY | HAL_ADC_STATE_REG_EOC)*/)
+		  ADC_Measure(&hadc1);
 
     /* USER CODE END WHILE */
 
@@ -245,7 +251,7 @@ static void MX_ADC1_Init(void)
   /** Common config
   */
   hadc1.Instance = ADC1;
-  hadc1.Init.ClockPrescaler = ADC_CLOCK_ASYNC_DIV1;
+  hadc1.Init.ClockPrescaler = ADC_CLOCK_ASYNC_DIV64;
   hadc1.Init.Resolution = ADC_RESOLUTION_12B;
   hadc1.Init.DataAlign = ADC_DATAALIGN_RIGHT;
   hadc1.Init.ScanConvMode = ADC_SCAN_DISABLE;
@@ -285,6 +291,53 @@ static void MX_ADC1_Init(void)
   /* USER CODE BEGIN ADC1_Init 2 */
 
   /* USER CODE END ADC1_Init 2 */
+
+}
+
+/**
+  * @brief TIM1 Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_TIM1_Init(void)
+{
+
+  /* USER CODE BEGIN TIM1_Init 0 */
+
+  /* USER CODE END TIM1_Init 0 */
+
+  TIM_ClockConfigTypeDef sClockSourceConfig = {0};
+  TIM_MasterConfigTypeDef sMasterConfig = {0};
+
+  /* USER CODE BEGIN TIM1_Init 1 */
+
+  /* USER CODE END TIM1_Init 1 */
+  htim1.Instance = TIM1;
+  htim1.Init.Prescaler = 0;
+  htim1.Init.CounterMode = TIM_COUNTERMODE_UP;
+  htim1.Init.Period = 65535;
+  htim1.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
+  htim1.Init.RepetitionCounter = 0;
+  htim1.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
+  if (HAL_TIM_Base_Init(&htim1) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  sClockSourceConfig.ClockSource = TIM_CLOCKSOURCE_INTERNAL;
+  if (HAL_TIM_ConfigClockSource(&htim1, &sClockSourceConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  sMasterConfig.MasterOutputTrigger = TIM_TRGO_RESET;
+  sMasterConfig.MasterOutputTrigger2 = TIM_TRGO2_RESET;
+  sMasterConfig.MasterSlaveMode = TIM_MASTERSLAVEMODE_DISABLE;
+  if (HAL_TIMEx_MasterConfigSynchronization(&htim1, &sMasterConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN TIM1_Init 2 */
+
+  /* USER CODE END TIM1_Init 2 */
 
 }
 
@@ -402,15 +455,14 @@ void HAL_ADC_ConvHalfCpltCallback(ADC_HandleTypeDef* hadc)
 
 }
 
-// Called when buffer is completely filled
+// Called when ADC buffer is completely filled
 void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* hadc)
 {
-	// Indicate function run with LED
-	HAL_GPIO_TogglePin(LD2_GPIO_Port, LD2_Pin);
+	// Run handler in ADC lib
+	ADC_HandleBufferFull(&hadc1, &hdma_adc1);
 
-	// Run FFT and display speed
-	double mps = ADC_HandleBufferFull();
-	LCD_DisplaySpeed(mps);
+	// Required to run multiple times
+	HAL_ADC_Stop(&hadc1);
 }
 
 /* USER CODE END 4 */
