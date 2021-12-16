@@ -250,6 +250,15 @@ void LCD_DisplaySpeed(const float metresPerSecond)
 	}
 }
 
+// Function to set speed unit and update display
+void LCD_SetSpeedUnit(EDisplayState unit)
+{
+	LCD_displayState = unit;
+	LCD_DisplayMenu();
+	LCD_DisplaySpeed(LCD_currentSpeed);
+}
+
+
 // Format speed given in m/s as string, output depending on selected unit
 void LCD_FormatSpeed(const float metresPerSecond, char output[])
 {
@@ -275,9 +284,7 @@ void LCD_FormatSpeed(const float metresPerSecond, char output[])
 // Handles button presses
 void LCD_ButtonHandler()
 {
-	LCD_displayState = LCD_displayState == 2 ? 0 : LCD_displayState + 1;
-	//HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_6);
-	LCD_DisplayMenu();
-	LCD_DisplaySpeed(LCD_currentSpeed);
+	// Increment speed unit
+	LCD_SetSpeedUnit(LCD_displayState == 2 ? 0 : LCD_displayState + 1);
 }
 

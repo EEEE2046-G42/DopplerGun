@@ -71,6 +71,7 @@ void LCD_usDelay(uint16_t);		// Short delay
 void LCD_DisplayMenu();				// Update and display menu (unit selection and indicator)
 void LCD_DisplaySpeed(const float);	// Update and display speed
 
+void LCD_SetSpeedUnit(EDisplayState);		// Function to set speed unit and update display
 void LCD_FormatSpeed(const float, char[]);	// Format speed given in m/s as string, output depending on selected unit
 
 void LCD_ButtonHandler();	// Handles button presses
