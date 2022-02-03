@@ -24,6 +24,7 @@
 /* USER CODE BEGIN Includes */
 #include "display.h"
 #include "adc.h"
+#include "fft.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -160,6 +161,8 @@ int main(void)
 	  HAL_DMA_StateTypeDef dmaState = HAL_DMA_GetState(&hdma_adc1);
 	  if (dmaState == HAL_DMA_STATE_READY /*&& HAL_ADC_GetState(&hadc1) & (HAL_ADC_STATE_READY | HAL_ADC_STATE_REG_EOC)*/)
 		  ADC_Measure(&hadc1);
+
+
 
     /* USER CODE END WHILE */
 
@@ -460,6 +463,10 @@ void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* hadc)
 {
 	// Run handler in ADC lib
 	ADC_HandleBufferFull(&hadc1, &hdma_adc1);
+
+
+	float v = getSpeed(ADC_BUFFER);
+	LCD_DisplaySpeed(v);
 
 	// Required to run multiple times
 	HAL_ADC_Stop(&hadc1);

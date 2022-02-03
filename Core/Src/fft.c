@@ -7,27 +7,53 @@
 
 #include "fft.h"
 
-double FFT(uint16_t ADCoutput[])
+float getLargestFreq(uint16_t ADCoutput[])
 {
-	//double Frequencystrengths[FFT_NUM_FREQ];
-	double Strongestfrequency = 0;
-	double Speedmps;
+	// Define necessary arrays
+	float32_t complexFFT[FFT_SAMPLES], realFFT[FFT_SAMPLES_HALF],
+			imagFFT[FFT_SAMPLES_HALF], angleFFT[FFT_SAMPLES_HALF],
+			powerFFT[FFT_SAMPLES_HALF];
 
-	for (uint16_t k = 0; k < FFT_NUM_FREQ; k++)	{
-		double Xk = 0;
-		for (uint16_t n = 0; n < FFT_NUM_FREQ; n++)
-		{
-			Xk += (ADCoutput[2*n]*exp((-2*M_PI*n*k)/(FFT_NUM_FREQ * 0.5)) + exp((-2*M_PI*k)/FFT_NUM_FREQ)*ADCoutput[2*n+1]*exp((-2*M_PI*n*k)/(FFT_NUM_FREQ * 0.5)));
-		}
+	// Define variables
+	uint32_t ifftFlag = 0;
+	arm_rfft_fast_instance_f32 S;
+	uint32_t maxIndex = 0;
+	float32_t maxValue;
 
-		//Frequencystrengths[k] = Xk;
+	// Convert uint16_t to float
+	float32_t input[FFT_SAMPLES];
+	for (uint16_t i = 0; i < FFT_SAMPLES; i++)
+		input[i] = (float32_t)input[i];
 
-		// Ignore DC component
-		if (Xk > Strongestfrequency && k != 0)
-			Strongestfrequency = Xk;
-	}
-	//printf("strongest frequency is %lf", &Strongestfrequency);
-	Speedmps = (Strongestfrequency*299792458)/(2*10587000000);
+	// Initialise converter
+	arm_status status = arm_rfft_fast_init_f32(&S, FFT_SAMPLES);
 
-	return Speedmps;
+	// Run conversion
+	arm_rfft_fast_f32(&S, input, complexFFT, ifftFlag);
+
+	// compute magnitudes
+	arm_cmplx_mag_squared_f32(complexFFT, powerFFT, FFT_SAMPLES_HALF);
+
+	// find biggest frequency
+	float32_t largest = 0;
+	float index = 0;
+	// Start at 1 (ignore DC)
+	for (uint16_t i = 1; i < FFT_SAMPLES_HALF; i++)
+		if (powerFFT[i] > largest)
+			{
+				largest = powerFFT[i];
+				index = i;
+			}
+
+	// Convert index to frequency
+	return index * 18000 / FFT_SAMPLES;
+}
+
+float getSpeed(uint16_t ADCoutput[])
+{
+	// Get speed with FFT
+	float f = getLargestFreq(ADCoutput);
+
+	// Convert this to velocity
+	return f * (float)300000000 / (2.0 * (float)10587000000);
 }

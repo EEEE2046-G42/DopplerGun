@@ -13,10 +13,13 @@
 #include "stm32l4xx_hal.h"
 
 // Include fft library
-#include "fft.h"
+#include "arm_math.h"
 
-#define FFT_NUM_FREQ 1024
+#define FFT_SAMPLES 1024
+#define FFT_SAMPLES_HALF (FFT_SAMPLES / 2)
 
-double FFT(uint16_t ADCoutput[]);
+float getLargestFreq(uint16_t ADCoutput[]);
+
+float getSpeed(uint16_t ADCoutput[]);
 
 #endif /* INC_FFT_H_ */

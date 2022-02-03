@@ -20,7 +20,7 @@ void ADC_Measure(ADC_HandleTypeDef *adc)
 }
 
 // Handles a full DMA buffer
-double ADC_HandleBufferFull(ADC_HandleTypeDef *adc, DMA_HandleTypeDef *dma)
+float ADC_HandleBufferFull(ADC_HandleTypeDef *adc, DMA_HandleTypeDef *dma)
 {
 	return 0 /*FFT(ADC_BUFFER)*/;
 }

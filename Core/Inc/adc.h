@@ -20,6 +20,6 @@ uint16_t ADC_BUFFER[ADC_BUFFER_LENGTH];
 
 void ADC_Calibrate(ADC_HandleTypeDef *adc);										// Calibrates ADC
 void ADC_Measure(ADC_HandleTypeDef *adc);										// Starts a measurement
-double ADC_HandleBufferFull(ADC_HandleTypeDef *adc, DMA_HandleTypeDef *dma);	// Handles a full DMA buffer
+float ADC_HandleBufferFull(ADC_HandleTypeDef *adc, DMA_HandleTypeDef *dma);	// Handles a full DMA buffer
 
 #endif /* INC_ADC_H_ */
