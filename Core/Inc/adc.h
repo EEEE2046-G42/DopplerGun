@@ -9,6 +9,7 @@
 #define INC_ADC_H_
 
 #define ADC_BUFFER_LENGTH 1024
+#define SAMPLE_FREQ 17857
 
 #include "stdint.h"
 #include "stdbool.h"

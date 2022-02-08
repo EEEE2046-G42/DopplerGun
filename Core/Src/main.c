@@ -25,6 +25,7 @@
 #include "display.h"
 #include "adc.h"
 #include "fft.h"
+#include "RS485.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -48,12 +49,15 @@ DMA_HandleTypeDef hdma_adc1;
 
 TIM_HandleTypeDef htim1;
 
+UART_HandleTypeDef huart5;
 UART_HandleTypeDef huart2;
 
 /* USER CODE BEGIN PV */
 
 bool prevLCDBtnState = false;
 uint32_t prevLCDBtnTimestamp = 0;
+
+float newSpeed;
 
 /* USER CODE END PV */
 
@@ -64,6 +68,7 @@ static void MX_DMA_Init(void);
 static void MX_USART2_UART_Init(void);
 static void MX_ADC1_Init(void);
 static void MX_TIM1_Init(void);
+static void MX_UART5_Init(void);
 /* USER CODE BEGIN PFP */
 
 /* USER CODE END PFP */
@@ -105,6 +110,7 @@ int main(void)
   MX_USART2_UART_Init();
   MX_ADC1_Init();
   MX_TIM1_Init();
+  MX_UART5_Init();
   /* USER CODE BEGIN 2 */
   //ADC_Calibrate(&hadc1);
 
@@ -162,6 +168,10 @@ int main(void)
 	  if (dmaState == HAL_DMA_STATE_READY /*&& HAL_ADC_GetState(&hadc1) & (HAL_ADC_STATE_READY | HAL_ADC_STATE_REG_EOC)*/)
 		  ADC_Measure(&hadc1);
 
+	  // Display new speed from ADC
+	  LCD_DisplaySpeed(newSpeed);
+	  transmit(&huart5, newSpeed);
+	  HAL_Delay(200); // Keep things visible
 
 
     /* USER CODE END WHILE */
@@ -211,8 +221,10 @@ void SystemClock_Config(void)
   {
     Error_Handler();
   }
-  PeriphClkInit.PeriphClockSelection = RCC_PERIPHCLK_USART2|RCC_PERIPHCLK_ADC;
+  PeriphClkInit.PeriphClockSelection = RCC_PERIPHCLK_USART2|RCC_PERIPHCLK_UART5
+                              |RCC_PERIPHCLK_ADC;
   PeriphClkInit.Usart2ClockSelection = RCC_USART2CLKSOURCE_PCLK1;
+  PeriphClkInit.Uart5ClockSelection = RCC_UART5CLKSOURCE_PCLK1;
   PeriphClkInit.AdcClockSelection = RCC_ADCCLKSOURCE_PLLSAI1;
   PeriphClkInit.PLLSAI1.PLLSAI1Source = RCC_PLLSOURCE_HSI;
   PeriphClkInit.PLLSAI1.PLLSAI1M = 1;
@@ -345,6 +357,41 @@ static void MX_TIM1_Init(void)
 }
 
 /**
+  * @brief UART5 Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_UART5_Init(void)
+{
+
+  /* USER CODE BEGIN UART5_Init 0 */
+
+  /* USER CODE END UART5_Init 0 */
+
+  /* USER CODE BEGIN UART5_Init 1 */
+
+  /* USER CODE END UART5_Init 1 */
+  huart5.Instance = UART5;
+  huart5.Init.BaudRate = 57600;
+  huart5.Init.WordLength = UART_WORDLENGTH_8B;
+  huart5.Init.StopBits = UART_STOPBITS_1;
+  huart5.Init.Parity = UART_PARITY_NONE;
+  huart5.Init.Mode = UART_MODE_TX;
+  huart5.Init.HwFlowCtl = UART_HWCONTROL_NONE;
+  huart5.Init.OverSampling = UART_OVERSAMPLING_16;
+  huart5.Init.OneBitSampling = UART_ONE_BIT_SAMPLE_DISABLE;
+  huart5.AdvancedInit.AdvFeatureInit = UART_ADVFEATURE_NO_INIT;
+  if (HAL_HalfDuplex_Init(&huart5) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN UART5_Init 2 */
+
+  /* USER CODE END UART5_Init 2 */
+
+}
+
+/**
   * @brief USART2 Initialization Function
   * @param None
   * @retval None
@@ -464,9 +511,10 @@ void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* hadc)
 	// Run handler in ADC lib
 	ADC_HandleBufferFull(&hadc1, &hdma_adc1);
 
+	//newSpeed = getSpeed(ADC_BUFFER);
 
-	float v = getSpeed(ADC_BUFFER);
-	LCD_DisplaySpeed(v);
+	// For testing purposes
+	newSpeed = 40960.0 / ADC_BUFFER[HAL_GetTick() % 1024];
 
 	// Required to run multiple times
 	HAL_ADC_Stop(&hadc1);

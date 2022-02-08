@@ -21,6 +21,7 @@ uint8_t toBCD(const uint8_t in)
 
 	// Split input into constituent digits and set output
 	uint8_t lower = constrained % 10;
+
 	uint8_t upper = constrained / 10;
 
 	return ((upper & 0x0F) << 4) + (lower & 0x0F);

@@ -27,9 +27,10 @@ float getLargestFreq(uint16_t ADCoutput[])
 
 	// Initialise converter
 	arm_status status = arm_rfft_fast_init_f32(&S, FFT_SAMPLES);
-
+	//arm_status status = arm_rfft_1024_fast_init_f32(&S);
 	// Run conversion
 	arm_rfft_fast_f32(&S, input, complexFFT, ifftFlag);
+
 
 	// compute magnitudes
 	arm_cmplx_mag_squared_f32(complexFFT, powerFFT, FFT_SAMPLES_HALF);
@@ -46,7 +47,7 @@ float getLargestFreq(uint16_t ADCoutput[])
 			}
 
 	// Convert index to frequency
-	return index * 18000 / FFT_SAMPLES;
+	return index * SAMPLE_FREQ / FFT_SAMPLES;
 }
 
 float getSpeed(uint16_t ADCoutput[])

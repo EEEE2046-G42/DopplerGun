@@ -17,6 +17,7 @@
 
 #define FFT_SAMPLES 1024
 #define FFT_SAMPLES_HALF (FFT_SAMPLES / 2)
+#define SAMPLE_FREQ 17857
 
 float getLargestFreq(uint16_t ADCoutput[]);
 
