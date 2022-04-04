@@ -606,10 +606,10 @@ void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* hadc)
 	// Run handler in ADC lib
 	ADC_HandleBufferFull(&hadc1, &hdma_adc1);
 
-	//newSpeed = getSpeed(ADC_BUFFER);
+	fftSpeed = getSpeed(ADC_BUFFER);
 
 	// For testing purposes, display stuff using 'random' ADC data
-	fftSpeed = 40960.0 / ADC_BUFFER[HAL_GetTick() % 1024];
+	//fftSpeed = 40960.0 / ADC_BUFFER[HAL_GetTick() % 1024];
 
 	// Required to run multiple times
 	HAL_ADC_Stop(&hadc1);
