@@ -26,6 +26,7 @@
 #include "adc.h"
 #include "fft.h"
 #include "RS485.h"
+#include "comp.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -47,9 +48,12 @@
 ADC_HandleTypeDef hadc1;
 DMA_HandleTypeDef hdma_adc1;
 
-TIM_HandleTypeDef htim1;
+COMP_HandleTypeDef hcomp1;
 
-UART_HandleTypeDef huart5;
+TIM_HandleTypeDef htim1;
+TIM_HandleTypeDef htim6;
+
+UART_HandleTypeDef huart1;
 UART_HandleTypeDef huart2;
 
 /* USER CODE BEGIN PV */
@@ -57,7 +61,18 @@ UART_HandleTypeDef huart2;
 bool prevLCDBtnState = false;
 uint32_t prevLCDBtnTimestamp = 0;
 
-float newSpeed;
+bool prevBlueBtnState = false;
+uint32_t prevBlueBtnTimestamp = 0;
+
+// Type for velocity source
+typedef enum
+{
+	Comparator,
+	FFT
+} EVelocitySource;
+
+// Default to comparator
+EVelocitySource velocitySource = Comparator;
 
 /* USER CODE END PV */
 
@@ -68,7 +83,9 @@ static void MX_DMA_Init(void);
 static void MX_USART2_UART_Init(void);
 static void MX_ADC1_Init(void);
 static void MX_TIM1_Init(void);
-static void MX_UART5_Init(void);
+static void MX_USART1_UART_Init(void);
+static void MX_COMP1_Init(void);
+static void MX_TIM6_Init(void);
 /* USER CODE BEGIN PFP */
 
 /* USER CODE END PFP */
@@ -110,7 +127,9 @@ int main(void)
   MX_USART2_UART_Init();
   MX_ADC1_Init();
   MX_TIM1_Init();
-  MX_UART5_Init();
+  MX_USART1_UART_Init();
+  MX_COMP1_Init();
+  MX_TIM6_Init();
   /* USER CODE BEGIN 2 */
   //ADC_Calibrate(&hadc1);
 
@@ -142,6 +161,10 @@ int main(void)
   // Take ADC measurement
   ADC_Measure(&hadc1);
 
+  // Enable timer
+  HAL_COMP_Start_IT(&hcomp1);
+  HAL_StatusTypeDef res = HAL_TIM_Base_Start_IT(&htim6);
+
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -153,26 +176,48 @@ int main(void)
 
 	  // Poll LCD button pin, inverted because it is active LOW
 	  bool LCDBtnState = !HAL_GPIO_ReadPin(LCD_BTN_GPIO_Port, LCD_BTN_Pin);
+	  bool BlueBtnState = !HAL_GPIO_ReadPin(B1_GPIO_Port, B1_Pin);
 
+	  // LCD BUTTON ----------------------------------------
 	  // Only respond when newly depressed and debounce
 	  if (LCDBtnState && !prevLCDBtnState && (HAL_GetTick() > prevLCDBtnTimestamp + BTN_DEBOUNCE_TIME))
 	  {
 		  LCD_ButtonHandler();
 		  prevLCDBtnTimestamp = HAL_GetTick();
 	  }
-
 	  prevLCDBtnState = LCDBtnState;
+
+	  // BLUE BUTTON -------------------------------------------
+	  // Only respond when newly depressed and debounce
+	  if (BlueBtnState && !prevBlueBtnState && (HAL_GetTick() > prevBlueBtnTimestamp + BTN_DEBOUNCE_TIME))
+	  {
+		  //velocitySource == Comparator ? FFT : Comparator;
+		  if (velocitySource == Comparator)
+		  {
+			  velocitySource = FFT;
+		  }
+		  else velocitySource = Comparator;
+		  {
+			  prevBlueBtnTimestamp = HAL_GetTick();
+		  }
+
+		  HAL_GPIO_WritePin(LD2_GPIO_Port, LD2_Pin, velocitySource == Comparator); // Green LED lit if comparator
+	  }
+	  prevBlueBtnState = BlueBtnState;
+
+	  // Update speed with speed derived from selected source
+	  // I love a good one-liner
+	  float newSpeed = velocitySource == Comparator ? compSpeed : fftSpeed;
 
 	  // Take measurement
 	  HAL_DMA_StateTypeDef dmaState = HAL_DMA_GetState(&hdma_adc1);
 	  if (dmaState == HAL_DMA_STATE_READY /*&& HAL_ADC_GetState(&hadc1) & (HAL_ADC_STATE_READY | HAL_ADC_STATE_REG_EOC)*/)
 		  ADC_Measure(&hadc1);
 
-	  // Display new speed from ADC
+	  // Display new speed
 	  LCD_DisplaySpeed(newSpeed);
-	  transmit(&huart5, newSpeed);
+	  transmit(&huart1, (uint8_t)newSpeed);
 	  HAL_Delay(200); // Keep things visible
-
 
     /* USER CODE END WHILE */
 
@@ -189,8 +234,13 @@ void SystemClock_Config(void)
 {
   RCC_OscInitTypeDef RCC_OscInitStruct = {0};
   RCC_ClkInitTypeDef RCC_ClkInitStruct = {0};
-  RCC_PeriphCLKInitTypeDef PeriphClkInit = {0};
 
+  /** Configure the main internal regulator output voltage
+  */
+  if (HAL_PWREx_ControlVoltageScaling(PWR_REGULATOR_VOLTAGE_SCALE1) != HAL_OK)
+  {
+    Error_Handler();
+  }
   /** Initializes the RCC Oscillators according to the specified parameters
   * in the RCC_OscInitTypeDef structure.
   */
@@ -218,28 +268,6 @@ void SystemClock_Config(void)
   RCC_ClkInitStruct.APB2CLKDivider = RCC_HCLK_DIV1;
 
   if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_4) != HAL_OK)
-  {
-    Error_Handler();
-  }
-  PeriphClkInit.PeriphClockSelection = RCC_PERIPHCLK_USART2|RCC_PERIPHCLK_UART5
-                              |RCC_PERIPHCLK_ADC;
-  PeriphClkInit.Usart2ClockSelection = RCC_USART2CLKSOURCE_PCLK1;
-  PeriphClkInit.Uart5ClockSelection = RCC_UART5CLKSOURCE_PCLK1;
-  PeriphClkInit.AdcClockSelection = RCC_ADCCLKSOURCE_PLLSAI1;
-  PeriphClkInit.PLLSAI1.PLLSAI1Source = RCC_PLLSOURCE_HSI;
-  PeriphClkInit.PLLSAI1.PLLSAI1M = 1;
-  PeriphClkInit.PLLSAI1.PLLSAI1N = 8;
-  PeriphClkInit.PLLSAI1.PLLSAI1P = RCC_PLLP_DIV7;
-  PeriphClkInit.PLLSAI1.PLLSAI1Q = RCC_PLLQ_DIV2;
-  PeriphClkInit.PLLSAI1.PLLSAI1R = RCC_PLLR_DIV8;
-  PeriphClkInit.PLLSAI1.PLLSAI1ClockOut = RCC_PLLSAI1_ADC1CLK;
-  if (HAL_RCCEx_PeriphCLKConfig(&PeriphClkInit) != HAL_OK)
-  {
-    Error_Handler();
-  }
-  /** Configure the main internal regulator output voltage
-  */
-  if (HAL_PWREx_ControlVoltageScaling(PWR_REGULATOR_VOLTAGE_SCALE1) != HAL_OK)
   {
     Error_Handler();
   }
@@ -310,6 +338,40 @@ static void MX_ADC1_Init(void)
 }
 
 /**
+  * @brief COMP1 Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_COMP1_Init(void)
+{
+
+  /* USER CODE BEGIN COMP1_Init 0 */
+
+  /* USER CODE END COMP1_Init 0 */
+
+  /* USER CODE BEGIN COMP1_Init 1 */
+
+  /* USER CODE END COMP1_Init 1 */
+  hcomp1.Instance = COMP1;
+  hcomp1.Init.InvertingInput = COMP_INPUT_MINUS_VREFINT;
+  hcomp1.Init.NonInvertingInput = COMP_INPUT_PLUS_IO1;
+  hcomp1.Init.OutputPol = COMP_OUTPUTPOL_NONINVERTED;
+  hcomp1.Init.Hysteresis = COMP_HYSTERESIS_NONE;
+  hcomp1.Init.BlankingSrce = COMP_BLANKINGSRC_NONE;
+  hcomp1.Init.Mode = COMP_POWERMODE_HIGHSPEED;
+  hcomp1.Init.WindowMode = COMP_WINDOWMODE_DISABLE;
+  hcomp1.Init.TriggerMode = COMP_TRIGGERMODE_IT_RISING;
+  if (HAL_COMP_Init(&hcomp1) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN COMP1_Init 2 */
+
+  /* USER CODE END COMP1_Init 2 */
+
+}
+
+/**
   * @brief TIM1 Initialization Function
   * @param None
   * @retval None
@@ -357,37 +419,76 @@ static void MX_TIM1_Init(void)
 }
 
 /**
-  * @brief UART5 Initialization Function
+  * @brief TIM6 Initialization Function
   * @param None
   * @retval None
   */
-static void MX_UART5_Init(void)
+static void MX_TIM6_Init(void)
 {
 
-  /* USER CODE BEGIN UART5_Init 0 */
+  /* USER CODE BEGIN TIM6_Init 0 */
 
-  /* USER CODE END UART5_Init 0 */
+  /* USER CODE END TIM6_Init 0 */
 
-  /* USER CODE BEGIN UART5_Init 1 */
+  TIM_MasterConfigTypeDef sMasterConfig = {0};
 
-  /* USER CODE END UART5_Init 1 */
-  huart5.Instance = UART5;
-  huart5.Init.BaudRate = 57600;
-  huart5.Init.WordLength = UART_WORDLENGTH_8B;
-  huart5.Init.StopBits = UART_STOPBITS_1;
-  huart5.Init.Parity = UART_PARITY_NONE;
-  huart5.Init.Mode = UART_MODE_TX;
-  huart5.Init.HwFlowCtl = UART_HWCONTROL_NONE;
-  huart5.Init.OverSampling = UART_OVERSAMPLING_16;
-  huart5.Init.OneBitSampling = UART_ONE_BIT_SAMPLE_DISABLE;
-  huart5.AdvancedInit.AdvFeatureInit = UART_ADVFEATURE_NO_INIT;
-  if (HAL_HalfDuplex_Init(&huart5) != HAL_OK)
+  /* USER CODE BEGIN TIM6_Init 1 */
+
+  /* USER CODE END TIM6_Init 1 */
+  htim6.Instance = TIM6;
+  htim6.Init.Prescaler = 244;
+  htim6.Init.CounterMode = TIM_COUNTERMODE_UP;
+  htim6.Init.Period = 65535;
+  htim6.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
+  if (HAL_TIM_Base_Init(&htim6) != HAL_OK)
   {
     Error_Handler();
   }
-  /* USER CODE BEGIN UART5_Init 2 */
+  sMasterConfig.MasterOutputTrigger = TIM_TRGO_RESET;
+  sMasterConfig.MasterSlaveMode = TIM_MASTERSLAVEMODE_DISABLE;
+  if (HAL_TIMEx_MasterConfigSynchronization(&htim6, &sMasterConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN TIM6_Init 2 */
 
-  /* USER CODE END UART5_Init 2 */
+  /* USER CODE END TIM6_Init 2 */
+
+}
+
+/**
+  * @brief USART1 Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_USART1_UART_Init(void)
+{
+
+  /* USER CODE BEGIN USART1_Init 0 */
+
+  /* USER CODE END USART1_Init 0 */
+
+  /* USER CODE BEGIN USART1_Init 1 */
+
+  /* USER CODE END USART1_Init 1 */
+  huart1.Instance = USART1;
+  huart1.Init.BaudRate = 57600;
+  huart1.Init.WordLength = UART_WORDLENGTH_8B;
+  huart1.Init.StopBits = UART_STOPBITS_1;
+  huart1.Init.Parity = UART_PARITY_NONE;
+  huart1.Init.Mode = UART_MODE_TX;
+  huart1.Init.HwFlowCtl = UART_HWCONTROL_NONE;
+  huart1.Init.OverSampling = UART_OVERSAMPLING_16;
+  huart1.Init.OneBitSampling = UART_ONE_BIT_SAMPLE_DISABLE;
+  huart1.AdvancedInit.AdvFeatureInit = UART_ADVFEATURE_DMADISABLEONERROR_INIT;
+  huart1.AdvancedInit.DMADisableonRxError = UART_ADVFEATURE_DMA_DISABLEONRXERROR;
+  if (HAL_HalfDuplex_Init(&huart1) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN USART1_Init 2 */
+
+  /* USER CODE END USART1_Init 2 */
 
 }
 
@@ -466,7 +567,7 @@ static void MX_GPIO_Init(void)
   /*Configure GPIO pin : B1_Pin */
   GPIO_InitStruct.Pin = B1_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_IT_FALLING;
-  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  GPIO_InitStruct.Pull = GPIO_PULLUP;
   HAL_GPIO_Init(B1_GPIO_Port, &GPIO_InitStruct);
 
   /*Configure GPIO pins : LD2_Pin RED_LED_Pin */
@@ -475,12 +576,6 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
-
-  /*Configure GPIO pin : COMP_Pin */
-  GPIO_InitStruct.Pin = COMP_Pin;
-  GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
-  GPIO_InitStruct.Pull = GPIO_NOPULL;
-  HAL_GPIO_Init(COMP_GPIO_Port, &GPIO_InitStruct);
 
   /*Configure GPIO pin : LCD_BTN_Pin */
   GPIO_InitStruct.Pin = LCD_BTN_Pin;
@@ -513,8 +608,8 @@ void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* hadc)
 
 	//newSpeed = getSpeed(ADC_BUFFER);
 
-	// For testing purposes
-	newSpeed = 40960.0 / ADC_BUFFER[HAL_GetTick() % 1024];
+	// For testing purposes, display stuff using 'random' ADC data
+	fftSpeed = 40960.0 / ADC_BUFFER[HAL_GetTick() % 1024];
 
 	// Required to run multiple times
 	HAL_ADC_Stop(&hadc1);
@@ -554,4 +649,3 @@ void assert_failed(uint8_t *file, uint32_t line)
 }
 #endif /* USE_FULL_ASSERT */
 
-/************************ (C) COPYRIGHT STMicroelectronics *****END OF FILE****/

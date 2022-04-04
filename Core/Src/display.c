@@ -235,9 +235,9 @@ void LCD_DisplaySpeed(const float metresPerSecond)
 
 	if (hasChanged)
 	{
-		// Set cursor position and clear row
+		// Set cursor position and clear row (excluding final col)
 		LCD_SetCursor(0, 0);
-		for (int i = 0; i < LCD_COLUMNS; i++)
+		for (int i = 0; i < LCD_COLUMNS - 1; i++)
 				LCD_WriteChar(' ');
 		LCD_SetCursor(6, 0);
 

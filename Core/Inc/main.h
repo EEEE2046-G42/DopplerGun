@@ -68,8 +68,6 @@ void Error_Handler(void);
 #define LD2_GPIO_Port GPIOA
 #define RED_LED_Pin GPIO_PIN_6
 #define RED_LED_GPIO_Port GPIOA
-#define COMP_Pin GPIO_PIN_0
-#define COMP_GPIO_Port GPIOB
 #define LCD_BTN_Pin GPIO_PIN_6
 #define LCD_BTN_GPIO_Port GPIOC
 #define TMS_Pin GPIO_PIN_13
@@ -80,6 +78,10 @@ void Error_Handler(void);
 #define SWO_GPIO_Port GPIOB
 /* USER CODE BEGIN Private defines */
 
+// New speeds from each source
+float compSpeed;
+float fftSpeed;
+
 /* USER CODE END Private defines */
 
 #ifdef __cplusplus
@@ -87,5 +89,3 @@ void Error_Handler(void);
 #endif
 
 #endif /* __MAIN_H */
-
-/************************ (C) COPYRIGHT STMicroelectronics *****END OF FILE****/
