@@ -196,8 +196,9 @@ int main(void)
 		  {
 			  velocitySource = FFT;
 		  }
-		  else velocitySource = Comparator;
+		  else 
 		  {
+			  velocitySource = Comparator;
 			  prevBlueBtnTimestamp = HAL_GetTick();
 		  }
 
