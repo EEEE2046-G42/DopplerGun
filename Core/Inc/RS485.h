@@ -32,7 +32,7 @@ void transmit(UART_HandleTypeDef* uartHandle, const uint8_t in)
 	// Create buffer
 	uint8_t buf = toBCD(in);
 
-	HAL_UART_Transmit(uartHandle, buf, 1, 10);
+	HAL_UART_Transmit(uartHandle, &buf, 1, 10);
 }
 
 #endif /* SRC_RS485_H_ */
